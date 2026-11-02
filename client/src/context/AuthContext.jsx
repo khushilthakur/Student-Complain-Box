@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { getApiUrl } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -37,7 +38,7 @@ export const AuthProvider = ({ children }) => {
     const activeToken = token || localStorage.getItem('scb_token');
     if (!activeToken) return;
     try {
-      const res = await fetch('/api/auth/me', {
+      const res = await fetch(getApiUrl('/api/auth/me'), {
         headers: {
           'Authorization': `Bearer ${activeToken}`
         }

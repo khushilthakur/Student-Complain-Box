@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Briefcase, Building2, Clock, CheckCircle2, 
-  AlertTriangle, Filter, ExternalLink, Paperclip 
+import {
+  Briefcase, Building2, Clock, CheckCircle2,
+  AlertTriangle, Filter, ExternalLink, Paperclip
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import ComplaintCard from '../components/ComplaintCard';
+import { getApiUrl } from '../services/api';
 
 export default function TeacherDashboard({ onSelectComplaint }) {
   const { currentUser } = useAuth();
@@ -16,8 +17,12 @@ export default function TeacherDashboard({ onSelectComplaint }) {
     if (!currentUser) return;
     try {
       setLoading(true);
-      const res = await fetch('/api/complaints/teacher', {
-        headers: { 'x-user-id': currentUser.id }
+      const token = localStorage.getItem('scb_token');
+      const res = await fetch(getApiUrl('/api/complaints/teacher'), {
+        headers: {
+          'x-user-id': currentUser.id,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       const data = await res.json();
       if (data.complaints) {
@@ -99,9 +104,8 @@ export default function TeacherDashboard({ onSelectComplaint }) {
               <span className="bg-white/10 dark:bg-black/20 px-3 py-1 rounded-lg backdrop-blur-md border border-white/10">
                 Dept: <strong className="text-[#D8C7B5]">{currentUser.department || 'Academic Faculty'}</strong>
               </span>
-              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase ${
-                currentUser.isVerified ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300'
-              }`}>
+              <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase ${currentUser.isVerified ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300'
+                }`}>
                 {currentUser.isVerified ? 'Verified Teacher' : 'Waiting for Approval'}
               </span>
             </div>
@@ -157,11 +161,10 @@ export default function TeacherDashboard({ onSelectComplaint }) {
               <button
                 key={st.id}
                 onClick={() => setStatusFilter(st.id)}
-                className={`px-3 py-1.5 rounded-lg transition ${
-                  statusFilter === st.id
+                className={`px-3 py-1.5 rounded-lg transition ${statusFilter === st.id
                     ? 'bg-gradient-to-r from-[#C9650F] to-[#A34C0C] text-white font-bold shadow-xs'
                     : 'bg-[#FBF9F5] dark:bg-[#1F1712] border border-[#E3D3C2] dark:border-[#38261A] text-[#4A3525] dark:text-[#D8C7B5] hover:bg-[#F2ECE4] dark:hover:bg-[#2A1E17]'
-                }`}
+                  }`}
               >
                 {st.label}
               </button>

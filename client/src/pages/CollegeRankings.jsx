@@ -3,6 +3,7 @@ import {
   Trophy, Flame, AlertCircle, Award, Building2, 
   ArrowRight, Users, Clock, CheckCircle2 
 } from 'lucide-react';
+import { getApiUrl } from '../services/api';
 
 export default function CollegeRankings({ onSelectCollege }) {
   const [data, setData] = useState(null);
@@ -11,7 +12,7 @@ export default function CollegeRankings({ onSelectCollege }) {
   const fetchRankings = async () => {
     try {
       setLoading(true);
-      const res = await fetch('/api/colleges/rankings');
+      const res = await fetch(getApiUrl('/api/colleges/rankings'));
       const result = await res.json();
       if (res.ok) {
         setData(result);

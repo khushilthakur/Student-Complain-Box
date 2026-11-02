@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Flag, X, AlertTriangle } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
+import { getApiUrl } from '../services/api';
 
 export default function ReportModal({ complaint, isOpen, onClose }) {
   const { showToast } = useNotifications();
@@ -14,7 +15,7 @@ export default function ReportModal({ complaint, isOpen, onClose }) {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/complaints/${complaint.id}/report`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaint.id}/report`), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ reason, details })

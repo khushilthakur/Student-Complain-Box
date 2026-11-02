@@ -9,6 +9,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import { STATUS_STYLES, PRIORITY_STYLES, CATEGORY_COLORS } from '../components/ComplaintCard';
 import ResolutionTimer from '../components/ResolutionTimer';
+import { getApiUrl } from '../services/api';
 
 export default function AdminDashboard({ onSelectComplaint }) {
   const { currentUser } = useAuth();
@@ -84,27 +85,40 @@ export default function AdminDashboard({ onSelectComplaint }) {
       const headers = getAuthHeaders();
 
       const [resComp, resCol, resUsers, resRep, resAna] = await Promise.all([
-        fetch('/api/admin/complaints?limit=300', { headers }),
-        fetch('/api/colleges', { headers }),
-        fetch('/api/admin/users', { headers }),
-        fetch('/api/admin/reports', { headers }),
-        fetch('/api/admin/analytics', { headers })
+        fetch(getApiUrl('/api/admin/complaints?limit=300'), { headers }),
+        fetch(getApiUrl('/api/colleges'), { headers }),
+        fetch(getApiUrl('/api/admin/users'), { headers }),
+        fetch(getApiUrl('/api/admin/reports'), { headers }),
+        fetch(getApiUrl('/api/admin/analytics'), { headers })
       ]);
 
-      const dataComp = await resComp.json();
-      const dataCol = await resCol.json();
-      const dataUsers = await resUsers.json();
-      const dataRep = await resRep.json();
-      const dataAna = await resAna.json();
+      const safeJson = async (res) => {
+        try {
+          if (!res.ok) {
+            console.warn(`[Admin] HTTP ${res.status} from ${res.url}`);
+            return null;
+          }
+          return await res.json();
+        } catch (e) {
+          console.error('[Admin] JSON parse error:', e);
+          return null;
+        }
+      };
 
-      if (dataComp.complaints) {
+      const dataComp = await safeJson(resComp);
+      const dataCol = await safeJson(resCol);
+      const dataUsers = await safeJson(resUsers);
+      const dataRep = await safeJson(resRep);
+      const dataAna = await safeJson(resAna);
+
+      if (dataComp?.complaints) {
         setComplaints(dataComp.complaints);
         if (dataComp.counts) setComplaintsCounts(dataComp.counts);
       }
-      if (dataCol.colleges) setColleges(dataCol.colleges);
-      if (dataUsers.students) setUsersData(dataUsers);
-      if (dataRep.reports) setReports(dataRep.reports);
-      if (dataAna.metrics) setAnalytics(dataAna);
+      if (dataCol?.colleges) setColleges(dataCol.colleges);
+      if (dataUsers && (dataUsers.students || dataUsers.teachers)) setUsersData(dataUsers);
+      if (dataRep?.reports) setReports(dataRep.reports);
+      if (dataAna?.metrics) setAnalytics(dataAna);
     } catch (err) {
       console.error('Error loading admin console:', err);
     } finally {
@@ -135,7 +149,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
   const handleApprove = async () => {
     if (!reviewModalComplaint) return;
     try {
-      const res = await fetch(`/api/complaints/${reviewModalComplaint.id}/review`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${reviewModalComplaint.id}/review`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -160,7 +174,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
       return;
     }
     try {
-      const res = await fetch(`/api/complaints/${reviewModalComplaint.id}/review`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${reviewModalComplaint.id}/review`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -183,7 +197,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
     e.preventDefault();
     if (!assignModalComplaint || !selectedTeacherId) return;
     try {
-      const res = await fetch(`/api/complaints/${assignModalComplaint.id}/assign`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${assignModalComplaint.id}/assign`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ teacherId: selectedTeacherId })
@@ -206,7 +220,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
     e.preventDefault();
     if (!escalateModalComplaint) return;
     try {
-      const res = await fetch(`/api/complaints/${escalateModalComplaint.id}/escalate`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${escalateModalComplaint.id}/escalate`), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -232,7 +246,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
       return;
     }
     try {
-      const res = await fetch(`/api/admin/users/${student.id}/quota`, {
+      const res = await fetch(getApiUrl(`/api/admin/users/${student.id}/quota`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ amount: 10 })
@@ -251,7 +265,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleUserSanction = async (userId, newStatus) => {
     try {
-      const res = await fetch(`/api/admin/users/${userId}/sanction`, {
+      const res = await fetch(getApiUrl(`/api/admin/users/${userId}/sanction`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: newStatus })
@@ -267,7 +281,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleApproveTeacher = async (teacherId) => {
     try {
-      const res = await fetch(`/api/admin/teachers/${teacherId}/approve`, {
+      const res = await fetch(getApiUrl(`/api/admin/teachers/${teacherId}/approve`), {
         method: 'PATCH',
         headers: getAuthHeaders()
       });
@@ -285,7 +299,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleRejectTeacher = async (teacherId) => {
     try {
-      const res = await fetch(`/api/admin/teachers/${teacherId}/reject`, {
+      const res = await fetch(getApiUrl(`/api/admin/teachers/${teacherId}/reject`), {
         method: 'PATCH',
         headers: getAuthHeaders()
       });
@@ -303,7 +317,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleSetTeacherStatus = async (teacherId, targetStatus) => {
     try {
-      const res = await fetch(`/api/admin/teachers/${teacherId}/status`, {
+      const res = await fetch(getApiUrl(`/api/admin/teachers/${teacherId}/status`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status: targetStatus })
@@ -326,7 +340,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleCollegeStatus = async (collegeId, status) => {
     try {
-      const res = await fetch(`/api/colleges/${collegeId}`, {
+      const res = await fetch(getApiUrl(`/api/colleges/${collegeId}`), {
         method: 'PATCH',
         headers: getAuthHeaders(),
         body: JSON.stringify({ status })
@@ -345,7 +359,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
       return;
     }
     try {
-      const res = await fetch(`/api/colleges/${collegeId}`, {
+      const res = await fetch(getApiUrl(`/api/colleges/${collegeId}`), {
         method: 'DELETE',
         headers: getAuthHeaders()
       });
@@ -364,7 +378,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
   const handleCreateCollege = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('/api/colleges', {
+      const res = await fetch(getApiUrl('/api/colleges'), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -393,7 +407,7 @@ export default function AdminDashboard({ onSelectComplaint }) {
 
   const handleReportAction = async (reportId, action, markFake = false) => {
     try {
-      const res = await fetch(`/api/admin/reports/${reportId}/action`, {
+      const res = await fetch(getApiUrl(`/api/admin/reports/${reportId}/action`), {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ action, markFake })

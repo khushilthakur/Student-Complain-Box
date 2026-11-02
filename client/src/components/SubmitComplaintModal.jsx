@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Building2, ShieldAlert, Paperclip, Send, AlertTriangle, UploadCloud, Check } from 'lucide-react';
 import { useNotifications } from '../context/NotificationContext';
+import { getApiUrl } from '../services/api';
 
 const CATEGORIES = [
   'Academic',
@@ -52,7 +53,7 @@ export default function SubmitComplaintModal({ isOpen, onClose, onSuccess, stude
 
     setUploadingFile(true);
     try {
-      const res = await fetch('/api/upload', {
+      const res = await fetch(getApiUrl('/api/upload'), {
         method: 'POST',
         body: formData
       });
@@ -88,7 +89,7 @@ export default function SubmitComplaintModal({ isOpen, onClose, onSuccess, stude
     setSubmitting(true);
     try {
       const token = localStorage.getItem('scb_token');
-      const res = await fetch('/api/complaints', {
+      const res = await fetch(getApiUrl('/api/complaints'), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

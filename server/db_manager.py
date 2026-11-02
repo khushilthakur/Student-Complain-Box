@@ -407,6 +407,17 @@ class DatabaseManager:
                 try:
                     res = client.table(table).select('*').execute()
                     rows = [to_camel_case(r) for r in (res.data or [])]
+                    if collection == 'users':
+                        for u in rows:
+                            if u.get('role') == 'teacher':
+                                if not u.get('approvalStatus'):
+                                    if u.get('isVerified') is True:
+                                        u['approvalStatus'] = 'Approved'
+                                    elif str(u.get('status', '')).lower() in ['rejected', 'unapproved', 'not approved', 'blocked']:
+                                        u['approvalStatus'] = 'Not Approved'
+                                    else:
+                                        u['approvalStatus'] = 'Waiting for Approval'
+                                u['accountStatus'] = u['approvalStatus']
                     with self.lock:
                         self._data[collection] = rows
                     return copy.deepcopy(rows)
@@ -415,6 +426,17 @@ class DatabaseManager:
 
         with self.lock:
             items = self._data.get(collection, [])
+            if collection == 'users':
+                for u in items:
+                    if u.get('role') == 'teacher':
+                        if not u.get('approvalStatus'):
+                            if u.get('isVerified') is True:
+                                u['approvalStatus'] = 'Approved'
+                            elif str(u.get('status', '')).lower() in ['rejected', 'unapproved', 'not approved', 'blocked']:
+                                u['approvalStatus'] = 'Not Approved'
+                            else:
+                                u['approvalStatus'] = 'Waiting for Approval'
+                        u['accountStatus'] = u['approvalStatus']
             return copy.deepcopy(items)
 
     def find(self, collection, predicate):
@@ -436,7 +458,17 @@ class DatabaseManager:
                 try:
                     res = client.table(table).select('*').eq('id', str(item_id)).limit(1).execute()
                     if res.data:
-                        return to_camel_case(res.data[0])
+                        item = to_camel_case(res.data[0])
+                        if collection == 'users' and item.get('role') == 'teacher':
+                            if not item.get('approvalStatus'):
+                                if item.get('isVerified') is True:
+                                    item['approvalStatus'] = 'Approved'
+                                elif str(item.get('status', '')).lower() in ['rejected', 'unapproved', 'not approved', 'blocked']:
+                                    item['approvalStatus'] = 'Not Approved'
+                                else:
+                                    item['approvalStatus'] = 'Waiting for Approval'
+                            item['accountStatus'] = item['approvalStatus']
+                        return item
                 except Exception as err:
                     print(f"[SUPABASE] Error find_by_id on {table} for {item_id}: {err}")
 
@@ -496,6 +528,18 @@ class DatabaseManager:
         return copy.deepcopy(new_item)
 
     def update(self, collection, item_id, updates):
+        if collection == 'users' and 'approvalStatus' in updates:
+            app_st = updates['approvalStatus']
+            if app_st == 'Approved':
+                updates.setdefault('isVerified', True)
+                updates.setdefault('status', 'active')
+            elif app_st == 'Not Approved':
+                updates.setdefault('isVerified', False)
+                updates.setdefault('status', 'rejected')
+            elif app_st == 'Waiting for Approval':
+                updates.setdefault('isVerified', False)
+                updates.setdefault('status', 'active')
+
         updated_item = None
         with self.lock:
             items = self._data.get(collection, [])

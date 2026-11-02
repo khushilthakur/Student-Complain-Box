@@ -8,6 +8,7 @@ import { CATEGORY_COLORS, PRIORITY_STYLES, STATUS_STYLES } from './ComplaintCard
 import ResolutionTimer from './ResolutionTimer';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { getApiUrl } from '../services/api';
 
 export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onRefresh }) {
   const { currentUser, role } = useAuth();
@@ -35,7 +36,7 @@ export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onR
     if (!complaintId) return;
     try {
       setLoading(true);
-      const res = await fetch(`/api/complaints/${complaintId}`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaintId}`), {
         headers: currentUser ? { 'x-user-id': currentUser.id } : {}
       });
       const result = await res.json();
@@ -75,7 +76,7 @@ export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onR
     if (!newComment.trim()) return;
     setSubmittingComment(true);
     try {
-      const res = await fetch(`/api/complaints/${complaint.id}/comments`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaint.id}/comments`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -101,7 +102,7 @@ export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onR
   const handleVerify = async (decision) => {
     setVerifying(true);
     try {
-      const res = await fetch(`/api/complaints/${complaint.id}/verify`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaint.id}/verify`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +136,7 @@ export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onR
     }
     setResolving(true);
     try {
-      const res = await fetch(`/api/complaints/${complaint.id}/resolve`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaint.id}/resolve`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +169,7 @@ export default function ComplaintDetailModal({ complaintId, isOpen, onClose, onR
     if (!progressNote.trim()) return;
     setUpdatingNote(true);
     try {
-      const res = await fetch(`/api/complaints/${complaint.id}/teacher-update`, {
+      const res = await fetch(getApiUrl(`/api/complaints/${complaint.id}/teacher-update`), {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

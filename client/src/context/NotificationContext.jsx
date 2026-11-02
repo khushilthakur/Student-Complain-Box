@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { useAuth } from './AuthContext';
+import { getApiUrl } from '../services/api';
 
 const NotificationContext = createContext(null);
 
@@ -25,7 +26,7 @@ export const NotificationProvider = ({ children }) => {
     }
 
     try {
-      const res = await fetch('/api/notifications', {
+      const res = await fetch(getApiUrl('/api/notifications'), {
         headers: { 'x-user-id': currentUser.id }
       });
       const data = await res.json();
@@ -46,7 +47,7 @@ export const NotificationProvider = ({ children }) => {
 
   const markAsRead = async (id) => {
     try {
-      await fetch(`/api/notifications/${id}/read`, {
+      await fetch(getApiUrl(`/api/notifications/${id}/read`), {
         method: 'PATCH',
         headers: { 'x-user-id': currentUser?.id }
       });
@@ -59,7 +60,7 @@ export const NotificationProvider = ({ children }) => {
 
   const markAllAsRead = async () => {
     try {
-      await fetch('/api/notifications/read-all', {
+      await fetch(getApiUrl('/api/notifications/read-all'), {
         method: 'POST',
         headers: { 'x-user-id': currentUser?.id }
       });

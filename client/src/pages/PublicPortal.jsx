@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { getApiUrl } from '../services/api';
 
 export default function PublicPortal({ 
   onSelectComplaint, 
@@ -97,7 +98,7 @@ export default function PublicPortal({
   const fetchColleges = async () => {
     try {
       setCollegesLoading(true);
-      const res = await fetch('/api/colleges');
+      const res = await fetch(getApiUrl('/api/colleges'));
       const data = await res.json();
       if (data.colleges) {
         setColleges(data.colleges);
@@ -116,7 +117,7 @@ export default function PublicPortal({
   const fetchHighestPending = async () => {
     try {
       setRankingsLoading(true);
-      const res = await fetch('/api/colleges/rankings');
+      const res = await fetch(getApiUrl('/api/colleges/rankings'));
       if (res.ok) {
         const data = await res.json();
         if (data && data.rankings && Array.isArray(data.rankings.highestPending)) {
@@ -193,7 +194,7 @@ export default function PublicPortal({
 
     setColRegLoading(true);
     try {
-      const res = await fetch('/api/colleges/register', {
+      const res = await fetch(getApiUrl('/api/colleges/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -330,7 +331,7 @@ export default function PublicPortal({
     const cleanNum = normalizeIndianMobile(studentMobile);
     setStudentLoading(true);
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,7 +370,7 @@ export default function PublicPortal({
     setStudentLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(studentMobile);
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch(getApiUrl('/api/auth/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ mobile: cleanNum, otp: studentOtp.trim(), role: 'student' })
@@ -399,7 +400,7 @@ export default function PublicPortal({
     setStudentLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(studentMobile);
-      const res = await fetch('/api/auth/register-student', {
+      const res = await fetch(getApiUrl('/api/auth/register-student'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -436,7 +437,7 @@ export default function PublicPortal({
     const cleanNum = normalizeIndianMobile(teacherMobile);
     setTeacherLoading(true);
     try {
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -475,7 +476,7 @@ export default function PublicPortal({
     setTeacherLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherMobile);
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch(getApiUrl('/api/auth/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -509,7 +510,7 @@ export default function PublicPortal({
 
     setTeacherLoading(true);
     try {
-      const res = await fetch('/api/auth/login-teacher', {
+      const res = await fetch(getApiUrl('/api/auth/login-teacher'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -572,7 +573,7 @@ export default function PublicPortal({
     setTeacherLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherMobile);
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -613,7 +614,7 @@ export default function PublicPortal({
     setTeacherLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherMobile);
-      const res = await fetch('/api/auth/register-teacher', {
+      const res = await fetch(getApiUrl('/api/auth/register-teacher'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

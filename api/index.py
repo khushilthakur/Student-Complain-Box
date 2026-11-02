@@ -23,11 +23,31 @@ class VercelPathFixer:
         self.wsgi_app = wsgi_app
 
     def __call__(self, environ, start_response):
-        request_uri = environ.get("REQUEST_URI", "")
-        if request_uri:
-            path_part = request_uri.split("?", 1)[0]
-            if path_part:
-                environ["PATH_INFO"] = path_part
+        candidates = [
+            environ.get("HTTP_X_FORWARDED_URI"),
+            environ.get("HTTP_X_MATCHED_PATH"),
+            environ.get("RAW_URI"),
+            environ.get("REQUEST_URI"),
+            environ.get("PATH_INFO")
+        ]
+
+        real_path = ""
+        for c in candidates:
+            if not c:
+                continue
+            parts = str(c).split("?", 1)
+            path_only = parts[0]
+            if path_only not in ("/api/index.py", "/index.py", "/api/index", "/index"):
+                real_path = path_only
+                if len(parts) > 1 and not environ.get("QUERY_STRING"):
+                    environ["QUERY_STRING"] = parts[1]
+                break
+
+        if real_path:
+            if not real_path.startswith("/api") and not real_path.startswith("/uploads"):
+                real_path = f"/api{real_path}" if real_path.startswith("/") else f"/api/{real_path}"
+            environ["PATH_INFO"] = real_path
+
         return self.wsgi_app(environ, start_response)
 
 

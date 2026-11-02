@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
 import ComplaintCard from '../components/ComplaintCard';
 import SubmitComplaintModal from '../components/SubmitComplaintModal';
+import { getApiUrl } from '../services/api';
 
 export default function StudentDashboard({ onSelectComplaint, isSubmitOpen, setIsSubmitOpen }) {
   const { currentUser, refreshUser } = useAuth();
@@ -19,8 +20,12 @@ export default function StudentDashboard({ onSelectComplaint, isSubmitOpen, setI
     if (!currentUser) return;
     try {
       setLoading(true);
-      const res = await fetch('/api/complaints/my', {
-        headers: { 'x-user-id': currentUser.id }
+      const token = localStorage.getItem('scb_token');
+      const res = await fetch(getApiUrl('/api/complaints/my'), {
+        headers: {
+          'x-user-id': currentUser.id,
+          ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+        }
       });
       const data = await res.json();
       if (data.complaints) {

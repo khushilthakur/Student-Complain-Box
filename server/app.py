@@ -3,6 +3,8 @@ import sys
 import re
 import time
 import random
+import hmac
+import hashlib
 from datetime import datetime, timezone, timedelta
 from functools import wraps
 
@@ -59,11 +61,53 @@ SLA_HOURS = {
 }
 
 app = Flask(__name__, static_folder=CLIENT_DIST if os.path.exists(CLIENT_DIST) else None)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True, allow_headers=["Content-Type", "Authorization", "x-user-id", "X-User-Id"])
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB limit
 
 # In-memory OTP storage: mobile -> { code, expiresAt, attempts, userId, role, lastSentAt }
 otp_store = {}
+
+def get_active_otp(clean_mobile):
+    """
+    Retrieves active OTP from in-memory cache or syncs from persistent Supabase notifications table.
+    Enables seamless OTP verification across stateless, multi-container Vercel serverless functions.
+    """
+    stored = otp_store.get(clean_mobile)
+    if not stored:
+        try:
+            from server.supabase_client import is_supabase_configured, get_supabase_client
+            if is_supabase_configured():
+                client_sb = get_supabase_client()
+                if client_sb:
+                    res = client_sb.table('notifications').select('*').eq('user_id', clean_mobile).eq('type', 'otp_auth').order('created_at', desc=True).limit(1).execute()
+                    if res.data:
+                        row = res.data[0]
+                        created_at_str = row.get('created_at', '')
+                        dt = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                        created_ts = dt.timestamp()
+                        stored = {
+                            'code': str(row.get('message')),
+                            'expiresAt': created_ts + 300,
+                            'lastSentAt': created_ts,
+                            'attempts': 0,
+                            'role': row.get('role', 'student')
+                        }
+                        otp_store[clean_mobile] = stored
+        except Exception:
+            pass
+    return stored
+
+def clear_active_otp(clean_mobile):
+    """Removes active OTP code from both in-memory store and Supabase."""
+    otp_store.pop(clean_mobile, None)
+    try:
+        from server.supabase_client import is_supabase_configured, get_supabase_client
+        if is_supabase_configured():
+            client_sb = get_supabase_client()
+            if client_sb:
+                client_sb.table('notifications').delete().eq('user_id', clean_mobile).eq('type', 'otp_auth').execute()
+    except Exception:
+        pass
 
 
 # --- HELPER FUNCTIONS ---
@@ -422,6 +466,26 @@ def send_otp():
         'role': stored_role
     }
 
+    # Persist in Supabase for multi-container serverless synchronization
+    try:
+        from server.supabase_client import is_supabase_configured, get_supabase_client
+        if is_supabase_configured():
+            client_sb = get_supabase_client()
+            if client_sb:
+                client_sb.table('notifications').delete().eq('user_id', clean_mobile).eq('type', 'otp_auth').execute()
+                client_sb.table('notifications').insert({
+                    'id': f"otp-{int(now * 1000)}",
+                    'user_id': clean_mobile,
+                    'role': stored_role,
+                    'title': 'OTP_CODE',
+                    'message': otp_code,
+                    'type': 'otp_auth',
+                    'is_read': False,
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }).execute()
+    except Exception:
+        pass
+
     # 5. Return the dynamically generated OTP to display in top banner on login page
     return jsonify({
         'success': True,
@@ -448,19 +512,19 @@ def verify_otp():
     if len(otp) != 6 or not otp.isdigit():
         return jsonify({'error': 'Verification code must be exactly 6 digits.'}), 400
 
-    stored = otp_store.get(clean_mobile)
+    stored = get_active_otp(clean_mobile)
     if not stored:
         return jsonify({'error': 'OTP expired. Please request a new OTP.'}), 400
 
     now = time.time()
     # Check 5-minute expiry
     if now > stored.get('expiresAt', 0):
-        otp_store.pop(clean_mobile, None)
+        clear_active_otp(clean_mobile)
         return jsonify({'error': 'OTP expired. Please request a new OTP.'}), 400
 
     # Check attempt limit (max 5)
     if stored.get('attempts', 0) >= 5:
-        otp_store.pop(clean_mobile, None)
+        clear_active_otp(clean_mobile)
         return jsonify({'error': 'Too many incorrect attempts. Please request a new OTP.'}), 429
 
     # Strict code match: Incorrect OTP rejected
@@ -476,7 +540,7 @@ def verify_otp():
     target_role = (data.get('role') or stored.get('role') or 'student').strip().lower()
 
     # Successful verification: Invalidate OTP immediately to prevent reuse
-    otp_store.pop(clean_mobile, None)
+    clear_active_otp(clean_mobile)
 
     # Check if a user with this normalized mobile number already exists in database
     user = db.find_one('users', lambda u: u.get('mobile') == clean_mobile)
@@ -645,16 +709,16 @@ def register_student():
     if not valid:
         return jsonify({'error': err}), 400
 
-    # If verification OTP was submitted, validate it against the OTP demonstration store
+    # If verification OTP was submitted, validate it against active OTP store
     submitted_otp = str(data.get('otp') or '').strip()
     if submitted_otp:
-        stored_otp = otp_store.get(clean_mobile)
+        stored = get_active_otp(clean_mobile)
         now = time.time()
-        if not stored_otp or now > stored_otp.get('expiresAt', 0):
+        if not stored or now > stored.get('expiresAt', 0):
             return jsonify({'error': 'OTP expired. Please request a new OTP.'}), 400
-        if stored_otp.get('code') != submitted_otp:
+        if stored.get('code') != submitted_otp:
             return jsonify({'error': 'Incorrect OTP. Please try again.'}), 400
-        otp_store.pop(clean_mobile, None)
+        clear_active_otp(clean_mobile)
 
     existing = db.find_one('users', lambda u: u.get('mobile') == clean_mobile and u.get('role') == 'student')
     if existing:
@@ -771,16 +835,16 @@ def register_teacher():
     if not valid:
         return jsonify({'error': err}), 400
 
-    # If verification OTP was submitted, validate it against the OTP demonstration store
+    # If verification OTP was submitted, validate it against active OTP store
     submitted_otp = str(data.get('otp') or '').strip()
     if submitted_otp:
-        stored_otp = otp_store.get(clean_mobile)
+        stored = get_active_otp(clean_mobile)
         now = time.time()
-        if not stored_otp or now > stored_otp.get('expiresAt', 0):
+        if not stored or now > stored.get('expiresAt', 0):
             return jsonify({'error': 'OTP expired. Please request a new OTP.'}), 400
-        if stored_otp.get('code') != submitted_otp:
+        if stored.get('code') != submitted_otp:
             return jsonify({'error': 'Incorrect OTP. Please try again.'}), 400
-        otp_store.pop(clean_mobile, None)
+        clear_active_otp(clean_mobile)
 
     college = db.find_by_id('colleges', college_id)
     if not college:

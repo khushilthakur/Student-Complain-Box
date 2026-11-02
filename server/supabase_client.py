@@ -13,6 +13,9 @@ ROOT_DIR = os.path.abspath(os.path.join(CURRENT_DIR, '..'))
 SERVER_ENV = os.path.join(CURRENT_DIR, '.env')
 ROOT_ENV = os.path.join(ROOT_DIR, '.env')
 
+# Default institutional Supabase project URL
+FALLBACK_SUPABASE_URL = "https://zlasakmbkpprcswtjzbi.supabase.co"
+
 def load_environment():
     """Load environment variables from server/.env or root .env."""
     env_file = SERVER_ENV if os.path.exists(SERVER_ENV) else (ROOT_ENV if os.path.exists(ROOT_ENV) else None)
@@ -31,15 +34,29 @@ def load_environment():
         except Exception:
             pass
 
-    # Normalize aliases
+    # Normalize aliases across URL variants
+    active_url = (
+        os.environ.get('SUPABASE_URL') or
+        os.environ.get('VITE_SUPABASE_URL') or
+        os.environ.get('NEXT_PUBLIC_SUPABASE_URL') or
+        os.environ.get('REACT_APP_SUPABASE_URL') or
+        FALLBACK_SUPABASE_URL
+    )
+    if active_url:
+        os.environ['SUPABASE_URL'] = active_url.strip().strip('"\'')
+
+    # Normalize aliases across key variants
     active_key = (
         os.environ.get('SUPABASE_SECRET_KEY') or
         os.environ.get('SUPABASE_SERVICE_ROLE_KEY') or
-        os.environ.get('SUPABASE_KEY')
+        os.environ.get('SUPABASE_KEY') or
+        os.environ.get('SUPABASE_SERVICE_KEY') or
+        os.environ.get('VITE_SUPABASE_ANON_KEY') or
+        os.environ.get('VITE_SUPABASE_KEY')
     )
     if active_key:
-        os.environ['SUPABASE_SECRET_KEY'] = active_key
-        os.environ['SUPABASE_SERVICE_ROLE_KEY'] = active_key
+        os.environ['SUPABASE_SECRET_KEY'] = active_key.strip().strip('"\'')
+        os.environ['SUPABASE_SERVICE_ROLE_KEY'] = active_key.strip().strip('"\'')
 
     return env_file
 
@@ -72,8 +89,18 @@ def get_supabase_config_status():
     """
     Returns configuration status without exposing secret values.
     """
-    raw_url = os.environ.get('SUPABASE_URL', '')
-    raw_key = os.environ.get('SUPABASE_SECRET_KEY', '') or os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '')
+    raw_url = (
+        os.environ.get('SUPABASE_URL', '') or
+        os.environ.get('VITE_SUPABASE_URL', '') or
+        os.environ.get('NEXT_PUBLIC_SUPABASE_URL', '') or
+        FALLBACK_SUPABASE_URL
+    )
+    raw_key = (
+        os.environ.get('SUPABASE_SECRET_KEY', '') or
+        os.environ.get('SUPABASE_SERVICE_ROLE_KEY', '') or
+        os.environ.get('SUPABASE_KEY', '') or
+        FALLBACK_SUPABASE_KEY
+    )
 
     url = raw_url.strip().strip('"\'')
     key = raw_key.strip().strip('"\'')

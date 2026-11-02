@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useNotifications } from '../context/NotificationContext';
+import { getApiUrl } from '../services/api';
 
 export default function DirectLoginPage({ onLoginSuccess }) {
   const { setAuthSession } = useAuth();
@@ -71,7 +72,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
 
   // Load registered colleges for dropdown
   useEffect(() => {
-    fetch('/api/colleges')
+    fetch(getApiUrl('/api/colleges'))
       .then(res => res.json())
       .then(data => {
         if (data.colleges && data.colleges.length > 0) {
@@ -196,7 +197,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(studentMobile);
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -238,7 +239,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(studentMobile);
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch(getApiUrl('/api/auth/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -278,7 +279,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherMobile);
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -320,7 +321,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherMobile);
-      const res = await fetch('/api/auth/verify-otp', {
+      const res = await fetch(getApiUrl('/api/auth/verify-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -357,7 +358,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login-teacher', {
+      const res = await fetch(getApiUrl('/api/auth/login-teacher'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -424,7 +425,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherRegMobile);
-      const res = await fetch('/api/auth/send-otp', {
+      const res = await fetch(getApiUrl('/api/auth/send-otp'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -466,7 +467,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
     setLoading(true);
     try {
       const cleanNum = normalizeIndianMobile(teacherRegMobile);
-      const res = await fetch('/api/auth/register-teacher', {
+      const res = await fetch(getApiUrl('/api/auth/register-teacher'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -527,7 +528,7 @@ export default function DirectLoginPage({ onLoginSuccess }) {
 
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login-admin', {
+      const res = await fetch(getApiUrl('/api/auth/login-admin'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
